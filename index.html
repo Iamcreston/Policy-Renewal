@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Policy Renewal</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <h1>Policy Renewal</h1>
+        <span class="policy=badge">POL=00000042 &nbsp;|&nbsp; Expiring in 28 days</span>
+    <div class="grid">
+        <div>
+            <label>Insured First Name</label>
+            <input type="text" id="fname"/>
+        </div>
+        <div> 
+            <label>Insured Last Name</label>
+            <input type="text" id="lname"/>
+    </div>
+    <div>
+        <label>Line of Business</label>
+        <select id="lob">
+            <option value="auto">Personal Auto</option>
+            <option value="home">Homeowners</option>
+            <option value="flood">Flood</option>
+        </select>
+    </div>
+    <div>
+        <label>State</label>
+        <select id="state">
+            <option value="GA">Georgia</option>
+            <option value="FL">Flordia</option>
+            <option valuse="TX">Texas</option>
+        </select>
+    </div>
+    <div>
+        <label>Insured Value ($)</label>
+        <input type="number" id="insured=value"> 
+    </div>
+    <div>
+        <label>Deductible</label>
+        <select id="deductible">
+            <option value="500">$500</option>
+            <option value="1000">$1000</option>
+            <option value="2500">$2500</option>
+        </select>
+    </div>
+    <div>
+        <label>New Effective Date</label>
+        <input type="date" id="eff-date"/>
+    </div>
+    </div>
+
+    <div class="comparison">
+ <div class="comp-box">
+ <div class="comp-label">CURRENT PREMIUM</div>
+ <div class="comp-amount" id="old-premium">$0.00</div>
+ </div>
+ <div class="comp-box new">
+ <div class="comp-label">RENEWAL PREMIUM</div>
+ <div class="comp-amount" id="new-premium">$0.00</div>
+ <div class="change-pct" id="change-pct"></div>
+ </div>
+</div>
+<p class="error" id="error-msg">Please fill in all required fields.</p>
+<button id="btn-submit">Generate Renewal Memo</button>
+<div id="memo-output"></div>
+
+<script>
+// Simulated existing policy data from the database
+var existingPolicy = {
+ fname: 'Creston',
+ lname: 'Harper',
+ lob: 'auto',
+ state: 'GA',
+ insuredValue: 25000,
+ deductible: 1000,
+ currentPremium: 1125.00
+};
+$(function() {
+ // Pre-populate all fields on page load
+ $('#fname').val(existingPolicy.fname);
+ $('#lname').val(existingPolicy.lname);
+ $('#lob').val(existingPolicy.lob);
+ $('#state').val(existingPolicy.state);
+ $('#insured-value').val(existingPolicy.insuredValue);
+ $('#deductible').val(existingPolicy.deductible);
+ // Set effective date to today
+ var today = new Date().toISOString().split('T')[0];
+ $('#eff-date').val(today);
+ // Show the current premium
+ $('#old-premium').text('$' + existingPolicy.currentPremium.toFixed(2));
+ // Calculate new premium on any change
+ $('#insured-value, #deductible, #lob, #state').on('input change', function() {
+ updatePremium();
+ });
+ // Calculate on load
+ updatePremium();
+ // Submit
+ $('#btn-submit').on('click', function() {
+ var valid = true;
+ if ($('#fname').val().trim() === '') valid = false;
+ if ($('#insured-value').val() === '') valid = false;
+ if ($('#eff-date').val() === '') valid = false;
+ if (!valid) {
+ $('#error-msg').show();
+ return;
+ }
+ $('#error-msg').hide();
+ generateMemo();
+ });
+});
+function updatePremium() {
+ var value = parseFloat($('#insured-value').val()) || 0;
+ var deduct = parseFloat($('#deductible').val()) || 1000;
+ var lob = $('#lob').val();
+ var state = $('#state').val();
+ // Base rate by LOB
+ var rate = 0.045;
+ if (lob === 'home') rate = 0.032;
+ if (lob === 'flood') rate = 0.058;
+ // State factor
+ var stateFactor = 1.0;
+ if (state === 'FL') stateFactor = 1.35;
+ if (state === 'TX') stateFactor = 1.20;
+ var newPrem = ((value / 1000) * rate * stateFactor) - (deduct * 0.08);
+ if (newPrem < 250) newPrem = 250;
+ $('#new-premium').text('$' + newPrem.toFixed(2));
+ // Show change percentage
+ var oldPrem = existingPolicy.currentPremium;
+ var changePct = ((newPrem - oldPrem) / oldPrem) * 100;
+ var sign = changePct >= 0 ? '+' : '';
+ var cls = changePct >= 0 ? 'up' : 'down';
+ $('#change-pct').html(
+ '<span class="' + cls + '">' + sign + changePct.toFixed(1) + '% vs current</span>'
+ );
+}
+function generateMemo() {
+ var newPrem = $('#new-premium').text();
+ var html = '<h2>Renewal Confirmation Memo</h2>';
+ html += '<p><strong>Policy:</strong> POL-00000042</p>';
+ html += '<p><strong>Insured:</strong> ' +
+ $('#fname').val() + ' ' + $('#lname').val() + '</p>';
+ html += '<p><strong>Line of Business:</strong> ' +
+ $('#lob option:selected').text() + '</p>';
+ html += '<p><strong>State:</strong> ' + $('#state').val() + '</p>';
+ html += '<p><strong>New Effective Date:</strong> ' + $('#eff-date').val() + '</p>';
+ html += '<p><strong>Expiration Date:</strong> ' +
+ new Date(new Date($('#eff-date').val()).setFullYear(
+ new Date($('#eff-date').val()).getFullYear() + 1
+ )).toISOString().split('T')[0] + '</p>';
+ html += '<p><strong>Current Premium:</strong> $' +
+ existingPolicy.currentPremium.toFixed(2) + '</p>';
+ html += '<p><strong>Renewal Premium:</strong> ' + newPrem + '</p>';
+ html += '<p><strong>Status:</strong> RENEWED</p>';
+ $('#memo-output').html(html).fadeIn(300);
+}
+</script>
+
+
+    </body>
+</html>
